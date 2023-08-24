@@ -1,0 +1,72 @@
+﻿@page "/registration"
+@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
+@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services;
+@inject IUserService userService;
+@inject NavigationManager navigationManager;
+@inject IJSRuntime js;
+
+<div class="row">
+    <div class="col-md-6 offset-3">
+
+        <div class="card-body">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="text-center fw-bold text-primary">Please Register For An Account</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary style="color:indianred" Model="@model" />
+                        <div class="form-group">
+                            <label for="name" class="form-label">Fullname</label>
+                            <InputText id="name" @bind-Value="@model.Name" class="form-control"></InputText>
+                            <ValidationMessage For="(() => model.Name)"></ValidationMessage>
+                        </div>
+
+                        <div class="form-group mt-2">
+                            <label for="Email" class="form-label">Email Address</label>
+                            <InputText id="Email" @bind-Value="@model.Email" class="form-control"></InputText>
+                            <ValidationMessage For="(() => model.Email)"></ValidationMessage>
+                        </div>
+
+                        <div class="form-group mt-2">
+                            <label for="Password" class="form-label">Password</label>
+                            <InputText type="password" id="Password" @bind-Value="model.Password" class="form-control"></InputText>
+                            <ValidationMessage For="(() => model.Password)"></ValidationMessage>
+                        </div>
+
+                        <div class="form-group mt-2">
+                            <label for="ConfirmPassword" class="form-label">Confirm Password</label>
+                            <InputText type="password" id="ConfirmPassword" @bind-Value="model.ConfirmPassword" class="form-control"></InputText>
+                            <ValidationMessage For="(() => model.ConfirmPassword)"></ValidationMessage>
+                        </div>
+
+                        <div class="form-group mt-2">
+                            <button class="btn btn-outline-danger float-end" type="submit">Click To Register</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+@code {
+    public RegistrationModel model = new RegistrationModel();
+
+    public async Task HandleSubmit()
+    {
+        if (model is null)
+            return;
+
+        var result = await userService.RegisterUser(model);
+        if (result.Success)
+        {
+            navigationManager.NavigateTo("/");
+        }
+        else
+        {
+            await js.InvokeVoidAsync("alert", result.Message);
+        }
+    }
+    }
