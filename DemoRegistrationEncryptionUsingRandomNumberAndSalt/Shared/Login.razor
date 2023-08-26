@@ -2,6 +2,7 @@
 @using Blazored.LocalStorage;
 @using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
 @using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services;
+@using Microsoft.AspNetCore.Components.Authorization;
 @inject IUserService userService;
 @inject NavigationManager navigationManager;
 @inject IJSRuntime js;
@@ -43,6 +44,18 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState).User;
+
+        if (user!.Identity!.IsAuthenticated)
+            navigationManager.NavigateTo("/");
+        else
+            await base.OnInitializedAsync();
+    }
     public LoginModel model = new LoginModel();
 
     public async Task HandleSubmit()
@@ -54,6 +67,7 @@
         if (result.Success)
         {
             await localStorageService.SetItemAsync<string>("JwtToken", result!.AccessToken!);
+            navigationManager.NavigateTo("/");
         }
         else
         {

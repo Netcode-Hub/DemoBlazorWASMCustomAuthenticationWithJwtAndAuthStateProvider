@@ -1,6 +1,7 @@
 ﻿@page "/registration"
 @using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
 @using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services;
+@using Microsoft.AspNetCore.Components.Authorization;
 @inject IUserService userService;
 @inject NavigationManager navigationManager;
 @inject IJSRuntime js;
@@ -53,6 +54,19 @@
 </div>
 @code {
     public RegistrationModel model = new RegistrationModel();
+
+     [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState).User;
+
+        if (user!.Identity!.IsAuthenticated)
+            navigationManager.NavigateTo("/");
+        else
+            await base.OnInitializedAsync();
+    }
 
     public async Task HandleSubmit()
     {

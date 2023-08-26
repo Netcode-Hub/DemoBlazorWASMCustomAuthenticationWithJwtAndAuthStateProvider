@@ -1,7 +1,10 @@
 using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Data;
 using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Models;
 using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,24 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowAnyMethod();
         });
+});
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    var tokenSettings = builder.Configuration.GetSection(nameof(TokenSettings)).Get<TokenSettings>();
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = tokenSettings!.Issuer,
+
+        ValidateAudience = true,
+        ValidAudience = tokenSettings!.Audience,
+
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSettings.SecretKey!)),
+
+        ClockSkew = TimeSpan.Zero
+    };
 });
 var app = builder.Build();
 

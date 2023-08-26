@@ -1,6 +1,7 @@
 ﻿
 using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Models;
 using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Controllers
@@ -10,12 +11,15 @@ namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserRepo userRepo;
-
+        private static readonly string[] Summaries = new[]
+        {
+            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+        };
         public UserController(IUserRepo userRepo)
         {
             this.userRepo = userRepo;
         }
-        [HttpPost]
+        [HttpPost("register")]
         public async Task<ActionResult<Response>> RegisterUser(RegistrationModel registrationModel)
         {
             var result = await userRepo.RegisterUserAsync(registrationModel);
@@ -32,6 +36,18 @@ namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Controllers
                 return Ok(result);
 
             return BadRequest(result);
+        }
+
+        [HttpGet("User/WF")]
+        public IEnumerable<WeatherForecast> Get()
+        {
+            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            })
+            .ToArray();
         }
     }
 }
