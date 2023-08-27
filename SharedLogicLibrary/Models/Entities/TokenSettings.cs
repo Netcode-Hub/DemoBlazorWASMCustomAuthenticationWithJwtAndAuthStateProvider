@@ -1,4 +1,4 @@
-﻿namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Models
+﻿namespace SharedLogicLibrary.Models.Entities
 {
     public class TokenSettings
     {

@@ -1,6 +1,5 @@
 ﻿@page "/registration"
-@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
-@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services;
+@using SharedLogicLibrary.Models.Entities;
 @inject IUserService userService;
 @inject NavigationManager navigationManager;
 @inject IJSRuntime js;
@@ -54,12 +53,26 @@
 @code {
     public RegistrationModel model = new RegistrationModel();
 
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState).User;
+
+        if (user!.Identity!.IsAuthenticated)
+            navigationManager.NavigateTo("/");
+        else
+            await base.OnInitializedAsync();
+    }
+
     public async Task HandleSubmit()
     {
         if (model is null)
             return;
 
-        var result = await userService.RegisterUser(model);
+        var registrationEntity = new RegistrationEntity() { Name = model.Name, Email = model.Email, Password = model.Password };
+        var result = await userService.RegisterUser(registrationEntity);
         if (result.Success)
         {
             navigationManager.NavigateTo("/");

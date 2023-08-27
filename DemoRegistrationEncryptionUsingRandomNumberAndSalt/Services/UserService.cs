@@ -1,27 +1,31 @@
-﻿using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
+﻿using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Provider;
+using SharedLogicLibrary.Models;
+using SharedLogicLibrary.Models.Entities;
 using System.Net.Http.Json;
 
 namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services
 {
     public class UserService : IUserService
     {
-        private readonly HttpClient httpClient;
+        private readonly IHttpClientFactory httpClientFactory;
 
-        public UserService(HttpClient httpClient)
+        public UserService( IHttpClientFactory httpClientFactory)
         {
-            this.httpClient = httpClient;
+            this.httpClientFactory = httpClientFactory;
         }
-
-        public async Task<Response> LoginUser(LoginModel loginModel)
+        public async Task<UserSession> LoginUser(LoginModel loginModel)
         {
+            var httpClient = httpClientFactory.CreateClient("MyApi");
             var user = await httpClient.PostAsJsonAsync("api/user/login", loginModel);
-            var response = await user.Content.ReadFromJsonAsync<Response>();
-            return (response!);
+            var response = await user.Content.ReadFromJsonAsync<UserSession>();
+
+            return response!;
         }
 
-        public async Task<Response> RegisterUser(RegistrationModel registrationModel)
+        public async Task<Response> RegisterUser(RegistrationEntity registrationEntity)
         {
-            var user = await httpClient.PostAsJsonAsync("api/user", registrationModel);
+            var httpClient = httpClientFactory.CreateClient("MyApi");
+            var user = await httpClient.PostAsJsonAsync("api/user/register", registrationEntity);
             var response = await user.Content.ReadFromJsonAsync<Response>();
             return (response!);
         }

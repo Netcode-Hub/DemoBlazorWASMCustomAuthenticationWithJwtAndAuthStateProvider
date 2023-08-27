@@ -1,8 +1,9 @@
 ﻿using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Data;
-using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using SharedLogicLibrary.Models;
+using SharedLogicLibrary.Models.Entities;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -12,31 +13,52 @@ namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Repositories
 {
     public class UserRepo : IUserRepo
     {
-        private readonly AppDbContext appDbContext;
         private readonly TokenSettings _tokenSettings;
+        private readonly AppDbContext appDbContext;
         public UserRepo(AppDbContext appDbContext, IOptions<TokenSettings> tokenSettings)
         {
             this.appDbContext = appDbContext;
             _tokenSettings = tokenSettings.Value;
         }
 
-        public async Task<Response> RegisterUserAsync(RegistrationModel registrationModel)
+        public async Task<Response> RegisterUserAsync(RegistrationEntity registrationEntity)
         {
-            var user = await appDbContext.Users.Where(u => u.Email.ToLower().Equals(registrationModel.Email.ToLower())).FirstOrDefaultAsync();
+            var user = await appDbContext.Users.Where(u => u.Email!.ToLower().Equals(registrationEntity.Email!.ToLower())).FirstOrDefaultAsync();
             if (user != null)
                 return (new Response() { Success = false, Message = "Email alredy exist" });
 
-            var newUser = new RegistrationModel()
+            var newUser = new RegistrationEntity()
             {
-                Name = registrationModel.Name,
-                Email = registrationModel.Email,
-                Password = HashPassword(registrationModel.Password)
+                Name = registrationEntity.Name,
+                Email = registrationEntity.Email,
+                Password = HashPassword(registrationEntity.Password!)
             };
 
             appDbContext.Users.Add(newUser);
             await appDbContext.SaveChangesAsync();
+
+
+            // add user role
+            var recentlyUserAdded = await appDbContext.Users.Where(_=>_.Email ==  registrationEntity.Email).FirstOrDefaultAsync();
+            var userRole = new UserRole();
+            if (registrationEntity.Email!.StartsWith("admin"))
+            {
+                userRole.UserId = recentlyUserAdded!.Id;
+                userRole.Role = "Admin";
+            }
+            else
+            {
+                userRole.UserId = recentlyUserAdded!.Id;
+                userRole.Role = "User";
+            }
+
+            appDbContext.UserRoles.Add(userRole);
+            await appDbContext.SaveChangesAsync();
+
             return (new Response() { Success = true, Message = "Successfully Created" });
         }
+
+
 
         private static string HashPassword(string password)
         {
@@ -54,43 +76,57 @@ namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Repositories
             return Convert.ToBase64String(passwordHash);
         }
 
-        public async Task<Response> LoginUserAsync(LoginModel loginModel)
+        public async Task<UserSession> LoginUserAsync(LoginModel loginModel)
         {
             if (loginModel == null)
-                return new Response() { Success = false, Message = "Bad Request made" };
+                return new UserSession();
 
-            var user = await appDbContext.Users.Where(u => u.Email.ToLower().Equals(loginModel.Email!.ToLower())).FirstOrDefaultAsync();
-            if (user == null)
-                return new Response() { Success = false, Message = "Invalid Email/Password" };
+            var user = await appDbContext.Users.Where(u => u.Email!.ToLower().Equals(loginModel.Email!.ToLower())).FirstOrDefaultAsync();
+            var userRole = await appDbContext.UserRoles.Where(_ => _.UserId == user!.Id).FirstOrDefaultAsync();
 
-            bool DoPasswordsMatch = VerifyUserPassword(loginModel.Password!, user.Password);
+            if (user is null || userRole is null)
+                return new UserSession();
+
+            bool DoPasswordsMatch = VerifyUserPassword(loginModel.Password!, user.Password!);
             if (!DoPasswordsMatch)
-                return new Response() { Success = false, Message = "Invalid Email/Password" };
+                return new UserSession();
 
-            var jwtAccessToken = GenerateJwtToken(user.Id, user.Name, user.Email);
-            return new Response() { AccessToken = jwtAccessToken, Success = true, Message = "Success" };
+            return GenerateJwtToken(user.Email!, userRole.Role!);
         }
 
-        private string GenerateJwtToken(int id, string name, string email)
+
+        //Generate string for token
+        private UserSession GenerateJwtToken(string email, string role)
         {
             var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_tokenSettings.SecretKey!));
             var credentials = new SigningCredentials(symmetricSecurityKey, SecurityAlgorithms.HmacSha256);
-            var claims = new List<Claim>();
-            claims.Add(new Claim("UserId", id.ToString()));
-            claims.Add(new Claim("Fullname", name));
-            claims.Add(new Claim("Email", email));
+            var claimsIdentity = new ClaimsIdentity(new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, email),
+                new Claim(ClaimTypes.Role, role),
+            });
 
-            var securityToken = new JwtSecurityToken
-                (
-                issuer: _tokenSettings.Issuer,
-                audience: _tokenSettings.Audience,
-                expires: DateTime.Now.AddSeconds(20),
-                signingCredentials: credentials,
-                claims: claims
-                );
-            return new JwtSecurityTokenHandler().WriteToken(securityToken);
+            var securityTokenDiscriptor = new SecurityTokenDescriptor
+            {
+                Subject = claimsIdentity,
+                Expires = DateTime.Now.AddDays(1),
+                SigningCredentials = credentials,
+            };
+
+            var jwtTokenHandler = new JwtSecurityTokenHandler();
+            var securityToken = jwtTokenHandler.CreateToken(securityTokenDiscriptor);
+            var token = jwtTokenHandler.WriteToken(securityToken);
+
+            return new UserSession()
+            {
+                Role = role,
+                Username = email,
+                Token = token
+            };
         }
 
+
+        //Decrypt user database password and encrypt user raw password and compare
         private bool VerifyUserPassword(string rawPassword, string databasePassword)
         {
             byte[] dbPasswordHash = Convert.FromBase64String(databasePassword);

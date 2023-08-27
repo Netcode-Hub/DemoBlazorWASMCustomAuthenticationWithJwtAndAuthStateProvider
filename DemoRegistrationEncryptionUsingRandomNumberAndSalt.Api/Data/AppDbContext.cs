@@ -1,5 +1,5 @@
-﻿using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
+using SharedLogicLibrary.Models.Entities;
 
 namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Data
 {
@@ -8,6 +8,8 @@ namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Api.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
         {
         }
-        public DbSet<RegistrationModel>  Users { get; set; }
+        public DbSet<RegistrationEntity> Users { get; set; }
+        public DbSet<UserRole> UserRoles { get; set; }
+
     }
 }

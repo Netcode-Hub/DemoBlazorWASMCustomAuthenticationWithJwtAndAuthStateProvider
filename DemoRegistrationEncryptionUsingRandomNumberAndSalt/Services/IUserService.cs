@@ -1,11 +1,12 @@
-﻿using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
+﻿using SharedLogicLibrary.Models;
+using SharedLogicLibrary.Models.Entities;
 
 namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services
 {
     public interface IUserService
     {
-        Task<Response> RegisterUser(RegistrationModel registrationModel);
-        Task<Response> LoginUser(LoginModel loginModel);
+        Task<Response> RegisterUser(RegistrationEntity registrationEntity);
+        Task<UserSession> LoginUser(LoginModel loginModel);
 
     }
 }

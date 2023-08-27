@@ -1,6 +1,9 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Provider;
+@using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims;
-@inherits LayoutComponentBase
+@inject AuthenticationStateProvider authStateProvider
+@inherits LayoutComponentBase;
+@inject ILocalStorageService localStorageService
 
 <div class="page">
     <div class="sidebar">
@@ -11,7 +14,8 @@
         <div class="top-row px-4">
             <AuthorizeView>
                 <Authorized>
-                    @DisplayInfo(context.User.Claims.ToList())
+                    @context!.User!.Identity!.Name
+                    <a @onclick="Logout" href="registration">Logout</a>
                 </Authorized>
                 <NotAuthorized>
                     <a href="registration">Register</a>
@@ -28,9 +32,10 @@
 </div>
 
 @code{
-    private string DisplayInfo(List<Claim> claims)
+    private async void Logout()
     {
-        var fullname = claims.Where(u => u.Type.Equals("Email")).Select(u => u.Value).FirstOrDefault();
-        return fullname!;
+        await localStorageService.RemoveItemAsync("UserData");
+        var cs = (CustomAuthenticationStateProvider)authStateProvider;
+        cs.NotifyAuthenticationState();
     }
 }

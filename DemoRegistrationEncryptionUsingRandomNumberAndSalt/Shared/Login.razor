@@ -1,12 +1,12 @@
 ﻿@page "/login"
-@using Blazored.LocalStorage;
-@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Models;
-@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Services;
+@using DemoRegistrationEncryptionUsingRandomNumberAndSalt.Provider;
 @inject IUserService userService;
 @inject NavigationManager navigationManager;
 @inject IJSRuntime js;
 @inject ILocalStorageService localStorageService;
-
+@inject AuthenticationStateProvider authStateProvider; 
+@using Blazor.SubtleCrypto
+@inject ICryptoService Crypto
 <div class="row">
     <div class="col-md-6 offset-3">
 
@@ -43,6 +43,18 @@
 </div>
 
 @code {
+    [CascadingParameter]
+    public Task<AuthenticationState> AuthState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = (await AuthState).User;
+
+        if (user!.Identity!.IsAuthenticated)
+            navigationManager.NavigateTo("/");
+        else
+            await base.OnInitializedAsync();
+    }
     public LoginModel model = new LoginModel();
 
     public async Task HandleSubmit()
@@ -51,13 +63,18 @@
             return;
 
         var result = await userService.LoginUser(model);
-        if (result.Success)
+        if (result.Username != null)
         {
-            await localStorageService.SetItemAsync<string>("JwtToken", result!.AccessToken!);
+            CryptoResult encryptedUsername = await Crypto.EncryptAsync(result.Username);
+            CryptoResult encryptedRole = await Crypto.EncryptAsync(result.Role);
+            var newEncryptedUserSession = new UserSession() { Role = encryptedRole.Value, Username = encryptedUsername.Value, Token = result.Token };
+            await localStorageService.SetItemAsync("UserData", newEncryptedUserSession);
+            (authStateProvider as CustomAuthenticationStateProvider).NotifyAuthenticationState();
+            navigationManager.NavigateTo("/", true);
         }
         else
         {
-            await js.InvokeVoidAsync("alert", result.Message);
+            await js.InvokeVoidAsync("alert", "Error occured");
         }
     }
 }
