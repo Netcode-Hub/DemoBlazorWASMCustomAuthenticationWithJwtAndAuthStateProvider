@@ -2,9 +2,7 @@
 using Blazored.LocalStorage;
 using Microsoft.AspNetCore.Components.Authorization;
 using SharedLogicLibrary.Models;
-using SharedLogicLibrary.Utilities;
 using System.Security.Claims;
-using System.Text.Json;
 
 namespace DemoRegistrationEncryptionUsingRandomNumberAndSalt.Provider
 {

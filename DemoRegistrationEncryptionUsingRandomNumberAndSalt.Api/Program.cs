@@ -40,11 +40,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     var tokenSettings = builder.Configuration.GetSection(nameof(TokenSettings)).Get<TokenSettings>();
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidIssuer = tokenSettings!.Issuer,
+        ValidateIssuer = false,
+       // ValidIssuer = tokenSettings!.Issuer,
 
-        ValidateAudience = true,
-        ValidAudience = tokenSettings!.Audience,
+        ValidateAudience = false,
+       // ValidAudience = tokenSettings!.Audience,
 
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSettings.SecretKey!)),
